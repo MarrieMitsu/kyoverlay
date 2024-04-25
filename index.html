@@ -1,0 +1,152 @@
+<html>
+    <head>
+        <title>kyoverlay</title>
+        <style>
+            @font-face {
+                font-family: 'Rubik';
+                font-style: nomal;
+                font-weight: 100 900;
+                font-display: swap;
+                src: url('/Rubik.woff2') format('woff2');
+                unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+            }
+            
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box; 
+                font-family: 'Rubik', Arial, monospace;
+            }
+
+            #display {
+                display: flex;
+                justify-content: end;
+                align-items: center;
+                position: relative;
+                margin: 0px;
+                padding: 12px;
+                overflow: hidden;
+                width: 400px;
+                height: 80px;
+                border-radius: 6px;
+                background-color: #0004;
+            }
+
+            #text {
+                text-wrap: nowrap;
+                white-space: nowrap;
+                font-size: 36px;
+                color: #EEE; 
+            }
+        </style>
+    </head>
+    <body>
+        <div id="display">
+            <span id="text"></span>
+        </div>
+        <script>
+            "use strict";
+
+            function getCookie() {
+                const obj = {};
+                
+                if (document.cookie) {
+                    document.cookie.split(";").forEach((e) => {
+                        const pair = e.split("=");
+                        const key = pair[0].replace(/\s/g, "");
+                        const value = pair[1].replace(/\s/g, "");
+                        obj[key] = value;
+                    });
+                }
+
+                return obj;
+            }
+
+            const cookie = getCookie();
+
+            const port = cookie['port'] ?? 3000;
+            const margin = cookie['margin'] ?? 0;
+            const padding = cookie['padding'] ?? 12;
+            const width = cookie['width'] ?? 400;
+            const height = cookie['height'] ?? 80;
+            const borderRadius = cookie['border_radius'] ?? 6;
+            const background = cookie['background'] ?? "#0004";
+            const foreground = cookie['foreground'] ?? "#EEE";
+            const fontsize = cookie['fontsize'] ?? 36;
+            const streakFontsize = Math.floor(fontsize / 2.2);
+            const stayDuration = cookie['stay_duration'] ?? 2000;
+            const fadeDuration = cookie['fade_duration'] ?? 500;
+
+            const displayEl = document.getElementById("display");
+            const textEl = document.getElementById("text");
+
+            displayEl.style.margin = `${margin}px`;
+            displayEl.style.padding = `${padding}px`;
+            displayEl.style.width = `${width}px`;
+            displayEl.style.height = `${height}px`;
+            displayEl.style.borderRadius = `${borderRadius}px`;
+            displayEl.style.backgroundColor = background;
+
+            textEl.style.color = foreground;
+            textEl.style.fontSize = fontsize;
+
+            const socket = new WebSocket(`ws://127.0.0.1:${port}/signal`);
+            const keys = new Array();
+            const initialStreak = 3;
+
+            let previousKey = "";
+            let streak = 1;
+            let keysTimeout;
+            let transitionTimeout;
+
+            function pushKey(key) {
+                if (previousKey === key) {
+                    streak += 1;
+                } else {
+                    streak = 1;
+                    previousKey = key;
+                }
+
+                if (streak > initialStreak) {
+                    if (keys[keys.length - 1] !== key) {
+                        keys.pop();
+                    }
+
+                    keys.push(`<span style="font-size: ${streakFontsize};">x${streak}</span>`);
+                } else {
+                    keys.push(key);
+                }
+            }
+
+            function renderText() {
+                textEl.style.transition = "";
+                textEl.style.opacity = 1;
+                textEl.innerHTML = keys.join('');
+            }
+
+            function clearText() {
+                textEl.style.transition = `opacity ${fadeDuration}ms`;
+                textEl.style.opacity = 0;
+
+                transitionTimeout = setTimeout(() => {
+                    previousKey = "";
+                    streak = 1;
+                    keys.length = 0;
+                    textEl.textContent = "";
+                }, fadeDuration);
+            }
+
+            socket.addEventListener('message', (event) => {
+                window.clearTimeout(keysTimeout);
+                window.clearTimeout(transitionTimeout);
+
+                pushKey(event.data);
+                renderText();
+
+                keysTimeout = setTimeout(() => {
+                    clearText();
+                }, stayDuration);
+            });
+        </script>
+    </body>
+</html>
