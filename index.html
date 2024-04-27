@@ -99,6 +99,15 @@
             let keysTimeout;
             let transitionTimeout;
 
+            function streakElement(streak) {
+                const node = document.createElement("span");
+
+                node.style.fontSize = streakFontsize;
+                node.textContent = "x" + streak; 
+
+                return node;
+            }
+
             function pushKey(key) {
                 if (previousKey === key) {
                     streak += 1;
@@ -109,10 +118,14 @@
 
                 if (streak > initialStreak) {
                     if (keys[keys.length - 1] !== key) {
-                        keys.pop();
+                        const node = keys[keys.length - 1];
+                        if (node instanceof HTMLElement) {
+                            node.textContent = "x" + streak;
+                        }
+                    } else {
+                        keys.push(streakElement(streak));
                     }
 
-                    keys.push(`<span style="font-size: ${streakFontsize};">x${streak}</span>`);
                 } else {
                     keys.push(key);
                 }
@@ -121,7 +134,11 @@
             function renderText() {
                 textEl.style.transition = "";
                 textEl.style.opacity = 1;
-                textEl.innerHTML = keys.join('');
+                textEl.replaceChildren();
+
+                for (let i = 0; i < keys.length; i++) {
+                    textEl.append(keys[i]);
+                }
             }
 
             function clearText() {
@@ -132,7 +149,7 @@
                     previousKey = "";
                     streak = 1;
                     keys.length = 0;
-                    textEl.textContent = "";
+                    textEl.replaceChildren();
                 }, fadeDuration);
             }
 

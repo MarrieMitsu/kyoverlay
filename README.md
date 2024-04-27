@@ -6,6 +6,8 @@ Text based keystrokes overlay
 
 ## Installation
 
+You need rust toolchain to build it yourself
+
 ```shell
 cargo install --git https://github.com/MarrieMitsu/kyoverlay
 ```
